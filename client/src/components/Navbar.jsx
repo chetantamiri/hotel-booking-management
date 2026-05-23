@@ -1,94 +1,286 @@
-import React from 'react'
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom';
 import { assets } from "../assets/assets";
+import { useClerk, useUser, UserButton } from '@clerk/clerk-react';
+
 const Navbar = () => {
+
     const navLinks = [
         { name: 'Home', path: '/' },
-        { name: 'Hotels', path: '/' },
+        { name: 'Hotels', path: '/rooms' },
         { name: 'Experience', path: '/' },
         { name: 'About', path: '/' },
     ];
 
+    const BookIcon = () => (
+        <svg
+            className="w-4 h-4 text-gray-700"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 19V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v13H7a2 2 0 0 0-2 2Zm0 0a2 2 0 0 0 2 2h12M9 3v14m7 0v4"
+            />
+        </svg>
+    );
 
     const [isScrolled, setIsScrolled] = React.useState(false);
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
-    React.useEffect(() => {
+    const { openSignIn } = useClerk();
+    const { user } = useUser();
+
+    const navigate = useNavigate();
+
+    useEffect(() => {
+
+        if (location.pathname !== '/') {
+            setIsScrolled(true);
+            return;
+        } else {
+            setIsScrolled(false);
+        }
+
+        setIsScrolled(prev => location.pathname !== '/' ? true : prev);
+
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 10);
         };
+
         window.addEventListener("scroll", handleScroll);
+
         return () => window.removeEventListener("scroll", handleScroll);
+
     }, []);
 
     return (
-            <nav className={`fixed top-0 left-0  w-full flex items-center justify-between px-4 md:px-16 lg:px-24 xl:px-32 transition-all duration-500 z-50 ${isScrolled ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4" : "py-4 md:py-6"}`}>
 
-                {/* Logo */}
-                
-<Link to="/">
-    <img
-        src={assets.logo}
-        alt="logo"
-        className={`h-9 ${isScrolled && "invert opacity-80"}`}
-    />
-</Link>
+        <nav
+            className={`fixed top-0 left-0 w-full flex items-center justify-between px-5 md:px-16 lg:px-24 xl:px-32 transition-all duration-500 z-50 ${isScrolled
+                    ? "bg-white/80 backdrop-blur-xl shadow-sm py-3 md:py-4 text-black border-b border-gray-200/50"
+                    : "bg-transparent py-4 md:py-6 text-white"
+                }`}
+        >
 
-                {/* Desktop Nav */}
-                <div className="hidden md:flex items-center gap-4 lg:gap-8">
-                    {navLinks.map((link, i) => (
-                        <a key={i} href={link.path} className={`group flex flex-col gap-0.5 ${isScrolled ? "text-gray-700" : "text-white"}`}>
-                            {link.name}
-                            <div className={`${isScrolled ? "bg-gray-700" : "bg-white"} h-0.5 w-0 group-hover:w-full transition-all duration-300`} />
-                        </a>
-                    ))}
-                    
-                </div>
+            {/* Logo */}
 
-                {/* Desktop Right */}
-                <div className="hidden md:flex items-center gap-4">
-                    <svg className={`h-6 w-6 text-white transition-all duration-500 ${isScrolled ? "invert" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg>
-                    <button className={`px-8 py-2.5 rounded-full ml-4 transition-all duration-500 ${isScrolled ? "text-white bg-black" : "bg-white text-black"}`}>
+            <Link to="/">
+                <img
+                    src={assets.logo}
+                    alt="logo"
+                    className={`h-9 transition-all duration-500 ${isScrolled ? "" : "invert"
+                        }`}
+                />
+            </Link>
+
+            {/* Desktop Nav */}
+
+            <div className="hidden md:flex items-center gap-4 lg:gap-8">
+
+                {navLinks.map((link, i) => (
+
+                    <Link
+                        key={i}
+                        to={link.path}
+                        className="group flex flex-col gap-0.5 font-medium tracking-wide"
+                    >
+
+                        {link.name}
+
+                        <div
+                            className={`h-0.5 w-0 group-hover:w-full transition-all duration-300 rounded-full ${isScrolled ? "bg-black" : "bg-white"
+                                }`}
+                        />
+
+                    </Link>
+
+                ))}
+
+                <button
+                    onClick={() => navigate(`/owner`)}
+                    className={`border px-5 py-2 text-sm font-medium rounded-full cursor-pointer transition-all duration-300 hover:scale-105 ${isScrolled
+                            ? "border-gray-300 hover:bg-black hover:text-white text-black"
+                            : "border-white/60 hover:bg-white hover:text-black text-white"
+                        }`}
+                >
+                    Dashboard
+                </button>
+
+            </div>
+
+            {/* Desktop Right Side */}
+
+            <div className="hidden md:flex items-center gap-4">
+
+                <img
+                    src={assets.searchIcon}
+                    alt=""
+                    className={`h-5 md:h-6 transition-all duration-300 cursor-pointer ${isScrolled
+                            ? "invert opacity-80"
+                            : "opacity-100"
+                        }`}
+                />
+
+                {user ? (
+
+                    <UserButton>
+
+                        <UserButton.MenuItems>
+
+                            <UserButton.Action
+                                label="My Booking"
+                                labelIcon={<BookIcon />}
+                                onClick={() => navigate(`/my-bookings`)}
+                            />
+
+                        </UserButton.MenuItems>
+
+                    </UserButton>
+
+                ) : (
+
+                    <button
+                        onClick={openSignIn}
+                        className="px-7 py-2.5 rounded-full ml-2 bg-black text-white font-medium shadow-lg hover:scale-105 hover:bg-gray-900 transition-all duration-300"
+                    >
                         Login
                     </button>
-                </div>
 
-                {/* Mobile Menu Button */}
-                <div className="flex items-center gap-3 md:hidden">
-                    <svg onClick={() => setIsMenuOpen(!isMenuOpen)} className={`h-6 w-6 cursor-pointer ${isScrolled ? "invert" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <line x1="4" y1="6" x2="20" y2="6" />
-                        <line x1="4" y1="12" x2="20" y2="12" />
-                        <line x1="4" y1="18" x2="20" y2="18" />
-                    </svg>
-                </div>
+                )}
 
-                {/* Mobile Menu */}
-                <div className={`fixed top-0 left-0 w-full h-screen bg-white text-base flex flex-col md:hidden items-center justify-center gap-6 font-medium text-gray-800 transition-all duration-500 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                    <button className="absolute top-4 right-4" onClick={() => setIsMenuOpen(false)}>
-                        <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                    </button>
+            </div>
 
-                    {navLinks.map((link, i) => (
-                        <a key={i} href={link.path} onClick={() => setIsMenuOpen(false)}>
-                            {link.name}
-                        </a>
-                    ))}
+            {/* Mobile Top Section */}
 
-                    <button className="border px-4 py-1 text-sm font-light rounded-full cursor-pointer transition-all">
-                        New Launch
-                    </button>
+            <div className="flex items-center gap-5 md:hidden">
 
-                    <button className="bg-black text-white px-8 py-2.5 rounded-full transition-all duration-500">
+                <img
+                    src={assets.searchIcon}
+                    alt="search"
+                    className={`h-5 transition-all duration-300 ${isScrolled
+                            ? "invert opacity-80"
+                            : "opacity-100"
+                        }`}
+                />
+
+                <button
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className="cursor-pointer"
+                >
+
+                    <img
+                        src={assets.menuIcon}
+                        alt="menu"
+                        className={`h-5 transition-all duration-300 ${isScrolled
+                                ? "invert opacity-80"
+                                : "opacity-100"
+                            }`}
+                    />
+
+                </button>
+
+            </div>
+
+            {/* Mobile Menu */}
+
+            <div
+                className={`fixed top-0 left-0 w-full h-dvh bg-white/95 backdrop-blur-2xl text-base flex flex-col md:hidden items-center justify-center gap-6 font-medium text-gray-900 transition-all duration-500 z-50 ${isMenuOpen
+                        ? "translate-x-0 opacity-100"
+                        : "-translate-x-full opacity-0"
+                    }`}
+            >
+
+                {/* Close Button */}
+
+                <button
+                    className="absolute top-6 right-6 p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 cursor-pointer"
+                    onClick={() => setIsMenuOpen(false)}
+                >
+
+                    <img
+                        src={assets.closeIcon}
+                        alt="close"
+                        className="h-6"
+                    />
+
+                </button>
+
+                {/* Mobile Links */}
+
+                {navLinks.map((link, i) => (
+
+                    <Link
+                        key={i}
+                        to={link.path}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="px-10 py-3 text-xl font-semibold tracking-wide hover:scale-105 transition-all duration-300"
+                    >
+                        {link.name}
+                    </Link>
+
+                ))}
+
+                {/* User Section */}
+
+                {user ? (
+
+                    <div className="flex flex-col items-center gap-6 mt-4">
+
+                        <UserButton>
+
+                            <UserButton.MenuItems>
+
+                                <UserButton.Action
+                                    label="My Booking"
+                                    labelIcon={<BookIcon />}
+                                    onClick={() => {
+                                        setIsMenuOpen(false);
+                                        navigate(`/my-bookings`);
+                                    }}
+                                />
+
+                            </UserButton.MenuItems>
+
+                        </UserButton>
+
+                        <button
+                            onClick={() => {
+                                setIsMenuOpen(false);
+                                navigate(`/owner`);
+                            }}
+                            className="border border-gray-300 px-10 py-3 text-sm font-semibold rounded-full cursor-pointer transition-all duration-300 hover:bg-black hover:text-white hover:border-black"
+                        >
+                            Dashboard
+                        </button>
+
+                    </div>
+
+                ) : (
+
+                    <button
+                        onClick={() => {
+                            openSignIn();
+                            setIsMenuOpen(false);
+                        }}
+                        className="bg-black text-white px-12 py-3.5 rounded-full transition-all duration-300 text-base font-semibold shadow-xl hover:scale-105"
+                    >
                         Login
                     </button>
-                </div>
-            </nav>
+
+                )}
+
+            </div>
+
+        </nav>
+
     );
 }
 
