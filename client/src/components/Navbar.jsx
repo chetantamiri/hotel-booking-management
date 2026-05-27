@@ -76,7 +76,7 @@ const Navbar = () => {
                 <img
                     src={assets.logo}
                     alt="logo"
-                    className={`h-9 transition-all duration-500 ${isScrolled ? "" : "invert"
+                    className={`h-9 transition-all duration-500 ${isScrolled ? "" : "brightness-0 invert"
                         }`}
                 />
             </Link>
