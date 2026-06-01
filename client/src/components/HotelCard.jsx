@@ -6,7 +6,7 @@ const HotelCard = ({ rooms, index }) => {
   return (
     <div>
       <Link
-        to={`/rooms/${rooms._id}`}
+        to={`/AllRooms/${rooms._id}`}
         onClick={() => scrollTo(0, 0)}
         key={rooms._id}
         className="group block"
