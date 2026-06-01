@@ -1,18 +1,47 @@
-import React from "react";
-import { assets, dashboardDummyData } from "../../assets/assets";
+import React, { useState, useEffect } from "react";
+import { assets } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
+  const { backendUrl, getToken } = useAppContext();
+  const [statsData, setStatsData] = useState({ totalBookings: 0, totalRevenue: 0 });
+  const [bookings, setBookings] = useState([]);
+
+  const fetchStats = async () => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.get(`${backendUrl}/api/booking/hotel-stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (data.success) {
+        setStatsData(data.stats);
+        setBookings(data.bookings);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   const stats = [
     {
       label: "Total Bookings",
-      value: dashboardDummyData.totalBookings,
+      value: statsData.totalBookings,
       icon: assets.totalBookingIcon,
       bgColor: "bg-blue-50",
       iconColor: "text-blue-600",
     },
     {
       label: "Total Revenue",
-      value: `$${dashboardDummyData.totalRevenue}`,
+      value: `$${statsData.totalRevenue}`,
       icon: assets.totalRevenueIcon,
       bgColor: "bg-emerald-50",
       iconColor: "text-emerald-600",
@@ -56,17 +85,17 @@ const Dashboard = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">User Name</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">User ID</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Room Name</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Total Amount</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Payment Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {dashboardDummyData.bookings.map((item, index) => (
+              {bookings.length > 0 ? bookings.map((item, index) => (
                 <tr key={index} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm text-gray-700">{item.user.username}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{item.room.roomType}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{item.user}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{item.room?.roomType}</td>
                   <td className="px-6 py-4 text-sm text-gray-900 font-medium">${item.totalPrice}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -78,7 +107,13 @@ const Dashboard = () => {
                     </span>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="4" className="px-6 py-10 text-center text-gray-500">
+                    No bookings found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

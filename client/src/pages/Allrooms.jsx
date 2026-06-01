@@ -1,12 +1,37 @@
-import React, { useState } from "react";
-import { roomsDummyData, assets, facilityIcons } from "../assets/assets";
+import React, { useState, useEffect } from "react";
+import { assets, facilityIcons } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 import StartRating from "../components/StartRating";
+import axios from "axios";
+import { useAppContext } from "../context/AppContext";
+import { toast } from "react-toastify";
 
 const Allrooms = () => {
   const navigate = useNavigate();
+  const { backendUrl } = useAppContext();
+  const [rooms, setRooms] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedPrice, setSelectedPrice] = useState("All");
+  const [loading, setLoading] = useState(true);
+
+  const fetchRooms = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/room/all`);
+      if (data.success) {
+        setRooms(data.rooms);
+      } else {
+        toast.error("Failed to load rooms");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
 
   const handleTypeChange = (type) => {
     if (selectedTypes.includes(type)) {
@@ -16,7 +41,7 @@ const Allrooms = () => {
     }
   };
 
-  const filteredRooms = roomsDummyData.filter((room) => {
+  const filteredRooms = rooms.filter((room) => {
     const typeMatch =
       selectedTypes.length === 0 || selectedTypes.includes(room.roomType);
     const priceMatch =
@@ -30,7 +55,7 @@ const Allrooms = () => {
     return typeMatch && priceMatch;
   });
 
-  const roomTypes = ["Single Bed", "Double Bed", "Luxury Room"];
+  const roomTypes = ["Single Bed", "Double Bed", "Suite", "Deluxe", "Luxury Room"];
   const priceRanges = [
     { label: "All Prices", value: "All" },
     { label: "$0 – $100", value: "0-100" },
@@ -64,13 +89,19 @@ const Allrooms = () => {
 
           {/* Results count */}
           <p className="text-xs font-sans uppercase tracking-widest text-stone-400 mb-6">
-            {filteredRooms.length}{" "}
-            {filteredRooms.length === 1 ? "room" : "rooms"} available
+            {!loading && (
+              <>
+                {filteredRooms.length}{" "}
+                {filteredRooms.length === 1 ? "room" : "rooms"} available
+              </>
+            )}
           </p>
 
           {/* Room Cards */}
           <div className="flex flex-col gap-6">
-            {filteredRooms.map((room, i) => (
+            {loading && <div className="text-center font-sans text-gray-500 py-10">Loading rooms...</div>}
+            
+            {!loading && filteredRooms.map((room, i) => (
               <div
                 key={room._id}
                 onClick={() => navigate(`/AllRooms/${room._id}`)}
@@ -83,8 +114,8 @@ const Allrooms = () => {
                 {/* Image */}
                 <div className="sm:w-72 sm:shrink-0 overflow-hidden">
                   <img
-                    src={room.images[0]}
-                    alt={room.hotel.name}
+                    src={room.images?.[0] || 'https://via.placeholder.com/400x300'}
+                    alt={room.hotel?.name || "Hotel Room"}
                     className="w-full h-56 sm:h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
@@ -94,7 +125,7 @@ const Allrooms = () => {
                   <div>
                     {/* City badge */}
                     <span className="inline-block text-[10px] uppercase tracking-[0.2em] font-sans bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full mb-3">
-                      {room.hotel.city}
+                      {room.hotel?.city || "City"}
                     </span>
 
                     {/* Name */}
@@ -102,7 +133,7 @@ const Allrooms = () => {
                       className="text-2xl text-stone-800 font-normal leading-snug mb-2 group-hover:text-amber-700 transition-colors"
                       style={{ fontFamily: "'Georgia', serif" }}
                     >
-                      {room.hotel.name}
+                      {room.hotel?.name || "Hotel Name"}
                     </h2>
 
                     {/* Rating */}
@@ -121,19 +152,19 @@ const Allrooms = () => {
                         className="w-3.5 h-3.5 mt-0.5 opacity-50"
                       />
                       <span className="text-stone-500 font-sans text-xs leading-relaxed">
-                        {room.hotel.address}
+                        {room.hotel?.address || "Address"}
                       </span>
                     </div>
 
                     {/* Amenities */}
                     <div className="flex flex-wrap gap-2">
-                      {room.amenities.map((item, idx) => (
+                      {room.amenities?.map((item, idx) => (
                         <div
                           key={idx}
                           className="flex items-center gap-1.5 bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-full"
                         >
                           <img
-                            src={facilityIcons[item]}
+                            src={facilityIcons[item] || assets.checkIcon}
                             alt={item}
                             className="w-3 h-3 opacity-60"
                           />
@@ -169,7 +200,7 @@ const Allrooms = () => {
               </div>
             ))}
 
-            {filteredRooms.length === 0 && (
+            {!loading && filteredRooms.length === 0 && (
               <div className="text-center py-20 text-stone-400 font-sans text-sm">
                 No rooms match your selected filters.
               </div>

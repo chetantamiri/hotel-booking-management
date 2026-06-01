@@ -1,31 +1,96 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { roomsDummyData, assets, facilityIcons } from "../assets/assets";
+import { useParams, useNavigate } from "react-router-dom";
+import { assets, facilityIcons } from "../assets/assets";
 import StartRating from "../components/StartRating";
+import axios from "axios";
+import { useAppContext } from "../context/AppContext";
+import { toast } from "react-toastify";
 
 const RoomDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { backendUrl, getToken, user } = useAppContext();
 
   const [room, setRoom] = useState(null);
   const [mainImage, setMainImage] = useState(null);
+  
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState(1);
+
+  const fetchRoom = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/room/single/${id}`);
+      if (data.success) {
+        setRoom(data.room);
+        setMainImage(data.room.images?.[0] || 'https://via.placeholder.com/600');
+      } else {
+        toast.error("Failed to load room details");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
-    const foundRoom = roomsDummyData.find((room) => room._id.toString() === id);
-
-    if (foundRoom) {
-      setRoom(foundRoom);
-      setMainImage(foundRoom.images[0]);
-    }
+    fetchRoom();
   }, [id]);
 
+  const handleBookRoom = async () => {
+    if (!user) {
+      toast.error("Please login to book a room");
+      return;
+    }
+    if (!checkIn || !checkOut) {
+      toast.error("Please select check-in and check-out dates");
+      return;
+    }
+
+    const checkInTime = new Date(checkIn).getTime();
+    const checkOutTime = new Date(checkOut).getTime();
+    if (checkOutTime <= checkInTime) {
+      toast.error("Check-out date must be after check-in date");
+      return;
+    }
+
+    const diffDays = Math.ceil((checkOutTime - checkInTime) / (1000 * 60 * 60 * 24));
+    const totalPrice = diffDays * room.pricePerNight;
+
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(
+        `${backendUrl}/api/booking/create`,
+        {
+          roomId: room._id,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          totalPrice
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (data.success) {
+        toast.success("Room booked successfully!");
+        navigate("/my-bookings");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while booking the room");
+    }
+  };
+
   if (!room) {
-    return <p>Loading room details...</p>;
+    return <div className="text-center py-20 text-gray-500">Loading room details...</div>;
   }
 
   return (
     <div className="px-6 md:px-12 lg:px-20 py-8">
       <h1 className="text-3xl font-bold">
-        {room.hotel.name}
+        {room.hotel?.name || "Hotel"}
         <span className="ml-3 text-lg font-normal text-gray-500">
           {room.roomType}
         </span>
@@ -42,7 +107,7 @@ const RoomDetails = () => {
 
       <div className="flex items-center gap-2 mt-2 text-gray-600">
         <img src={assets.locationIcon} alt="Location" className="w-5 h-5" />
-        <span>{room.hotel.address}</span>
+        <span>{room.hotel?.address || "Address"}</span>
       </div>
 
       <div className="mt-6">
@@ -54,7 +119,7 @@ const RoomDetails = () => {
       </div>
 
       <div className="flex gap-3 flex-wrap mt-4">
-        {room.images.map((image, index) => (
+        {room.images?.map((image, index) => (
           <img
             key={index}
             src={image}
@@ -75,12 +140,12 @@ const RoomDetails = () => {
           </h2>
 
           <div className="flex flex-wrap gap-4 mb-6">
-            {room.amenities.map((item, index) => (
+            {room.amenities?.map((item, index) => (
               <div
                 key={index}
                 className="flex items-center gap-2 border rounded-lg px-4 py-2"
               >
-                <img src={facilityIcons[item]} alt={item} className="w-5 h-5" />
+                <img src={facilityIcons[item] || assets.checkIcon} alt={item} className="w-5 h-5" />
                 <p className="text-gray-700">{item}</p>
               </div>
             ))}
@@ -94,7 +159,7 @@ const RoomDetails = () => {
         </div>
 
         {/* Booking Card */}
-        <div className="border rounded-xl shadow-lg p-6 h-fit">
+        <div className="border rounded-xl shadow-lg p-6 h-fit bg-white">
           <h2 className="text-3xl font-bold mb-6">
             ${room.pricePerNight}
             <span className="text-lg font-normal text-gray-500">/night</span>
@@ -108,7 +173,10 @@ const RoomDetails = () => {
               <input
                 type="date"
                 id="checkIn"
+                value={checkIn}
+                onChange={(e) => setCheckIn(e.target.value)}
                 required
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full border rounded-lg p-2"
               />
             </div>
@@ -120,7 +188,10 @@ const RoomDetails = () => {
               <input
                 type="date"
                 id="checkOut"
+                value={checkOut}
+                onChange={(e) => setCheckOut(e.target.value)}
                 required
+                min={checkIn || new Date().toISOString().split("T")[0]}
                 className="w-full border rounded-lg p-2"
               />
             </div>
@@ -134,14 +205,19 @@ const RoomDetails = () => {
                 id="guests"
                 min="1"
                 max="10"
-                defaultValue="1"
+                value={guests}
+                onChange={(e) => setGuests(e.target.value)}
                 required
                 className="w-full border rounded-lg p-2"
               />
             </div>
 
-            <button className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition">
-              Check Availability
+            <button 
+              type="button" 
+              onClick={handleBookRoom}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition"
+            >
+              Book Room
             </button>
           </div>
         </div>

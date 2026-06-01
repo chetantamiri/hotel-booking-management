@@ -1,15 +1,54 @@
-import React, { useState } from "react";
-import { roomsDummyData, facilityIcons } from "../../assets/assets";
+import React, { useState, useEffect } from "react";
+import { facilityIcons } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const ListRoom = () => {
-  const [rooms, setRooms] = useState(structuredClone(roomsDummyData));
+  const { backendUrl, getToken } = useAppContext();
+  const [rooms, setRooms] = useState([]);
 
-  const toggleAvailability = (id) => {
-    setRooms((prev) =>
-      prev.map((room) =>
-        room._id === id ? { ...room, isAvailable: !room.isAvailable } : room
-      )
-    );
+  const fetchOwnerRooms = async () => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.get(`${backendUrl}/api/room/owner-rooms`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (data.success) {
+        setRooms(data.rooms);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOwnerRooms();
+  }, []);
+
+  const toggleAvailability = async (id) => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(`${backendUrl}/api/room/toggle-availability`, { roomId: id }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (data.success) {
+        setRooms((prev) =>
+          prev.map((room) =>
+            room._id === id ? { ...room, isAvailable: !room.isAvailable } : room
+          )
+        );
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to toggle availability");
+    }
   };
 
   return (
@@ -33,18 +72,18 @@ const ListRoom = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {rooms.map((room) => (
+            {rooms.length > 0 ? rooms.map((room) => (
               <tr key={room._id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <img
-                      src={room.images[0]}
+                      src={room.images?.[0] || 'https://via.placeholder.com/150'}
                       alt={room.roomType}
                       className="w-12 h-12 rounded-lg object-cover border border-gray-200"
                     />
                     <div>
                       <p className="text-sm font-medium text-gray-900">{room.roomType}</p>
-                      <p className="text-xs text-gray-400">{room.hotel.name}</p>
+                      <p className="text-xs text-gray-400">{room.hotel?.name}</p>
                     </div>
                   </div>
                 </td>
@@ -79,7 +118,7 @@ const ListRoom = () => {
                   <button
                     type="button"
                     onClick={() => toggleAvailability(room._id)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
                       room.isAvailable ? "bg-emerald-500" : "bg-gray-300"
                     }`}
                     role="switch"
@@ -93,7 +132,13 @@ const ListRoom = () => {
                   </button>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                  No rooms found. Add a room to get started!
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

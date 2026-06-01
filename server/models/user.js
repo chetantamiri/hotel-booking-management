@@ -5,13 +5,18 @@ const userSchema = mongoose.Schema(
     _id: { type: String, required: true },
     name: { type: String, required: true },
     email: { type: String, required: true },
-    image: { type: String, required: true },
-    role: { type: String, enum: ["hotelOwner", "user"], default: "user" },
-    recentSearchedCities: [{ type: String, required: true }],
+    // ✅ image is NOT required — some Clerk users have no profile photo
+    image: { type: String, default: "" },
+    role: {
+      type: String,
+      enum: ["hotelOwner", "user"],
+      default: "user",
+    },
+    recentSearchedCities: [{ type: String }],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-const user = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
 
-export default user;
+export default User;

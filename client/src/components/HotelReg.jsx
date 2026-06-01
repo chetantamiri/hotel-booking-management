@@ -1,14 +1,55 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { assets, cities } from "../assets/assets";
+import { useAppContext } from "../context/AppContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-const HotelReg = () => {
+const HotelReg = ({ onClose }) => {
+  const { backendUrl, getToken } = useAppContext();
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    city: "",
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(`${backendUrl}/api/hotelregister/register`, {
+        name: formData.name,
+        contact: formData.phone,
+        address: formData.address,
+        city: formData.city
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (data.success) {
+        toast.success(data.message || "Hotel registered successfully!");
+        if (onClose) onClose();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to register hotel");
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <form className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-5xl relative">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-5xl relative">
         {/* Close Button */}
         <img
           src={assets.closeIcon}
           alt=""
+          onClick={onClose}
           className="w-6 h-6 absolute top-4 right-4 cursor-pointer"
         />
 
@@ -36,8 +77,11 @@ const HotelReg = () => {
                 <input
                   type="text"
                   id="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Enter hotel name"
                   className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
 
@@ -48,8 +92,11 @@ const HotelReg = () => {
                 <input
                   type="tel"
                   id="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
                   placeholder="Type Here"
                   className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
 
@@ -60,8 +107,11 @@ const HotelReg = () => {
                 <input
                   type="text"
                   id="address"
+                  value={formData.address}
+                  onChange={handleChange}
                   placeholder="Type Here"
                   className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
 
@@ -71,7 +121,10 @@ const HotelReg = () => {
                 </label>
                 <select
                   id="city"
+                  value={formData.city}
+                  onChange={handleChange}
                   className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 >
                   <option value="">Select City</option>
 

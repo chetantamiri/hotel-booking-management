@@ -1,9 +1,13 @@
 import React, { useState } from "react";
 import { assets } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const roomTypeOptions = ["Single Bed", "Double Bed", "Suite", "Deluxe"];
 
 const Addrooms = () => {
+  const { backendUrl, getToken } = useAppContext();
   const [image, setImage] = useState({
     1: null,
     2: null,
@@ -40,10 +44,56 @@ const Addrooms = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!input.roomType || !input.pricePerNight) {
+      toast.error("Please fill in room type and price");
+      return;
+    }
+
     try {
-      console.log("Submitted:", { input, image });
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("roomType", input.roomType);
+      formData.append("pricePerNight", input.pricePerNight);
+
+      // get selected amenities as an array of strings
+      const selectedAmenities = Object.keys(input.amenities).filter(
+        (key) => input.amenities[key]
+      );
+      formData.append("amenities", JSON.stringify(selectedAmenities));
+
+      // append images
+      Object.keys(image).forEach((key) => {
+        if (image[key]) {
+          formData.append("images", image[key]);
+        }
+      });
+
+      const { data } = await axios.post(`${backendUrl}/api/room/create`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success) {
+        toast.success(data.message);
+        // Reset form
+        setImage({ 1: null, 2: null, 3: null, 4: null });
+        setInput({
+          ...input,
+          roomType: "",
+          pricePerNight: "",
+          amenities: {
+            FreeWiFi: false,
+            RoomServices: false,
+            FreeBreakfast: false,
+            MountainView: false,
+            PoolAccess: false,
+          },
+        });
+      } else {
+        toast.error(data.message);
+      }
     } catch (error) {
       console.error(error);
+      toast.error("An error occurred while creating the room");
     }
   };
 
@@ -151,7 +201,7 @@ const Addrooms = () => {
           <div className="pt-2">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 hover:shadow-md active:scale-95"
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all duration-200 hover:shadow-md active:scale-95"
             >
               Add Room
             </button>
